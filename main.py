@@ -1,13 +1,14 @@
-
-import requests, json, os.path
 from pprint import pprint
+import requests, json, os.path
 from datetime import datetime
+from tqdm import tqdm
 
 with open('/Users/rup/Work/BTC/Rules.txt') as file:
     vk_token = file.readline().strip('\n')
     ya_token = file.readline()
-# vk_id = '552934290'
-vk_id = '193603962'
+# vk_id = '552934290' #ДЗ
+# vk_id = '193603962' #Лера
+vk_id = '22889807' #Ншан
 
 class vk_API:
 
@@ -41,6 +42,11 @@ class vk_API:
         img_list.sort(key=lambda item: sum(item['scale']), reverse=True)
         return img_list
 
+    def get_albums(self):
+        current_url = 'photos.getAlbums'
+        response = requests.get(self.url + current_url, self.params).json()['response']['items']
+        return response
+
 class yaDisk_API:
 
     def __init__(self,token):
@@ -73,6 +79,25 @@ class yaDisk_API:
         response = requests.put(self.url, headers=self.headers, params=params,)
         return response
 
+    def upload_from_list(self, list, dir='my_files',img_qt=5):
+        json_log = []
+        for img in tqdm(list[:img_qt:],
+                        desc='Идет загрузка файлов на ЯДиск',
+                        colour='green'):
+            yandex_files = [item['path'].strip("disk:/") for item in self.get_files()['items']]
+            if f"{dir}/{img['file_name']}" in yandex_files:
+                file_name = img['file_name'].strip('.jpg') + '_' + str(datetime.now().date()) + '.jpg'
+            else:
+                file_name = img['file_name']
+            file = requests.get(img['url'])
+            self.make_dir(dir)
+            self.uploader(file, f'{dir}/{file_name}')
+            json_log += [{'file_name': file_name,
+                          'size': img['size']
+                          }]
+        save_json(json_log, f'files/logs/{str(datetime.now().date())}/img_log')
+        return json_log
+
 
 def save_json(content,file_name):
     file_name += '.json'
@@ -83,28 +108,12 @@ def save_json(content,file_name):
     with open(file_name, 'w+') as file:
         json.dump(content, file, ensure_ascii=False, indent=2)
 
-def ya_upload_from_vk(vk,ya,ya_dir='my_files',q_image=5,album='profile'):
-    upload_list = vk.info_filter(album)
-    json_log = []
-    for img in upload_list[:q_image:]:
-        yandex_files = [item['path'].strip("disk:/") for item in ya.get_files()['items']]
-        if f"{ya_dir}/{img['file_name']}" in yandex_files:
-            file_name = img['file_name'].strip('.jpg')+'_'+str(datetime.now().date())+'.jpg'
-        else:
-            file_name = img['file_name']
-        file = requests.get(img['url'])
-        ya.make_dir(ya_dir)
-        ya.uploader(file, f'{ya_dir}/{file_name}')
-        json_log += [{'file_name':file_name,
-                      'size':img['size']
-                      }]
-    save_json(json_log,f'files/logs/{str(datetime.now().date())}/img_log')
-    return json_log
-
-
 vk_one=vk_API(vk_token,vk_id)
 ya_one=yaDisk_API(ya_token)
-# pprint(ya_upload_from_vk(vk_one,ya_one,'new_files'))
+
+# pprint(vk_one.get_albums())
+my_img_list = vk_one.info_filter()
+# ya_one.upload_from_list(my_img_list)
 
 
 
