@@ -6,9 +6,8 @@ from tqdm import tqdm
 with open('/Users/rup/Work/BTC/Rules.txt') as file:
     vk_token = file.readline().strip('\n')
     ya_token = file.readline()
-# vk_id = '552934290' #ДЗ
-# vk_id = '193603962' #Лера
-vk_id = '22889807' #Ншан
+
+vk_id = '552934290' #ДЗ
 
 class vk_API:
 
@@ -30,15 +29,17 @@ class vk_API:
         response = requests.get(self.url+current_url,{**self.params,**current_params}).json()['response']['items']
         return response
 
-    def info_filter(self, album='profile'):
-        ph_list = self.get_info(album)
-        img_list = [{
-                    'file_name': f"{ph_info['likes']['count']}.jpg",
-                      'size': f'{ph_info["sizes"][-1]["height"]}x{ph_info["sizes"][-1]["width"]}',
-                      'scale': (ph_info["sizes"][-1]["height"], ph_info["sizes"][-1]["width"]),
-                      'url': ph_info["sizes"][-1]["url"]
-                      }
-                    for ph_info in ph_list]
+    def info_filter(self, album_id_list=['profile']):
+        alb_list = [self.get_info(album) for album in album_id_list]
+        img_list = []
+        for ph_list in alb_list:
+            img_list += [{
+                        'file_name': f"{ph_info['likes']['count']}.jpg",
+                          'size': f'{ph_info["sizes"][-1]["height"]}x{ph_info["sizes"][-1]["width"]}',
+                          'scale': (ph_info["sizes"][-1]["height"], ph_info["sizes"][-1]["width"]),
+                          'url': ph_info["sizes"][-1]["url"]
+                          }
+                        for ph_info in ph_list]
         img_list.sort(key=lambda item: sum(item['scale']), reverse=True)
         return img_list
 
@@ -98,7 +99,6 @@ class yaDisk_API:
         save_json(json_log, f'files/logs/{str(datetime.now().date())}/img_log')
         return json_log
 
-
 def save_json(content,file_name):
     file_name += '.json'
     try:
@@ -111,9 +111,9 @@ def save_json(content,file_name):
 vk_one=vk_API(vk_token,vk_id)
 ya_one=yaDisk_API(ya_token)
 
-# pprint(vk_one.get_albums())
-my_img_list = vk_one.info_filter()
-# ya_one.upload_from_list(my_img_list)
+
+upload_list = vk_one.info_filter()
+ya_one.upload_from_list(upload_list)
 
 
 
