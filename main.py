@@ -11,7 +11,7 @@ vk_id = '552934290' #ДЗ
 
 class vk_API:
 
-    def __init__(self,token,id):
+    def __init__(self, token, id):
         self.url = 'https://api.vk.com/method/'
         self.params = {
             'access_token':token,
@@ -26,31 +26,37 @@ class vk_API:
             'photo_sizes': 1
                           }
         current_url = 'photos.get'
-        response = requests.get(self.url+current_url,{**self.params,**current_params}).json()['response']['items']
-        return response
+        response = requests.get(self.url + current_url, {**self.params, **current_params}).json()
+        items = response['response']['items']
+        return items
 
-    def info_filter(self, album_id_list=['profile']):
+    def info_filter(self, album_id_list=None):
+        if album_id_list is None:
+            album_id_list = ['profile']
         alb_list = [self.get_info(album) for album in album_id_list]
         img_list = []
         for ph_list in alb_list:
-            img_list += [{
-                        'file_name': f"{ph_info['likes']['count']}.jpg",
-                          'size': f'{ph_info["sizes"][-1]["height"]}x{ph_info["sizes"][-1]["width"]}',
-                          'scale': (ph_info["sizes"][-1]["height"], ph_info["sizes"][-1]["width"]),
-                          'url': ph_info["sizes"][-1]["url"]
-                          }
-                        for ph_info in ph_list]
+            img_list += [
+                {
+                    'file_name': f"{ph_info['likes']['count']}.jpg",
+                    'size': f'{ph_info["sizes"][-1]["height"]}x{ph_info["sizes"][-1]["width"]}',
+                    'scale': (ph_info["sizes"][-1]["height"], ph_info["sizes"][-1]["width"]),
+                    'url': ph_info["sizes"][-1]["url"]
+                }
+                for ph_info in ph_list
+            ]
         img_list.sort(key=lambda item: sum(item['scale']), reverse=True)
         return img_list
 
     def get_albums(self):
         current_url = 'photos.getAlbums'
-        response = requests.get(self.url + current_url, self.params).json()['response']['items']
-        return response
+        response = requests.get(self.url + current_url, self.params).json()
+        items = response['response']['items']
+        return items
 
 class yaDisk_API:
 
-    def __init__(self,token):
+    def __init__(self, token):
         self.token = token
         self.headers = {
             'Content-Type': 'application/json',
@@ -59,28 +65,28 @@ class yaDisk_API:
         self.url = "https://cloud-api.yandex.net/v1/disk/resources/"
 
     def get_files(self):
-        url = self.url+"files"
+        url = self.url + "files"
         response = requests.get(url, headers=self.headers)
         return response.json()
 
-    def _get_upload_link(self,file_name):
-        url = self.url+"upload"
-        params = {"path":file_name,
-                  "overwrite":'true'}
+    def _get_upload_link(self, file_name):
+        url = self.url + "upload"
+        params = {"path": file_name,
+                  "overwrite": 'true'}
         response = requests.get(url, headers=self.headers, params=params)
         return response.json()
 
-    def uploader(self,file,file_name):
+    def uploader(self, file, file_name):
         href = self._get_upload_link(file_name).get('href')
-        response = requests.put(href,data=file)
+        response = requests.put(href, data=file)
         return response
 
-    def make_dir(self,path):
-        params = {'path':path}
+    def make_dir(self, path):
+        params = {'path': path}
         response = requests.put(self.url, headers=self.headers, params=params,)
         return response
 
-    def upload_from_list(self, list, dir='my_files',img_qt=5):
+    def upload_from_list(self, list, dir='my_files', img_qt=5):
         json_log = []
         for img in tqdm(list[:img_qt:],
                         desc='Идет загрузка файлов на ЯДиск',
@@ -93,9 +99,10 @@ class yaDisk_API:
             file = requests.get(img['url'])
             self.make_dir(dir)
             self.uploader(file, f'{dir}/{file_name}')
-            json_log += [{'file_name': file_name,
-                          'size': img['size']
-                          }]
+            json_log += [{
+                    'file_name': file_name,
+                    'size': img['size']
+            }]
         save_json(json_log, f'files/logs/{str(datetime.now().date())}/img_log')
         return json_log
 
@@ -108,12 +115,12 @@ def save_json(content,file_name):
     with open(file_name, 'w+') as file:
         json.dump(content, file, ensure_ascii=False, indent=2)
 
-vk_one=vk_API(vk_token,vk_id)
-ya_one=yaDisk_API(ya_token)
+if __name__ == '__main__':
+    vk_one=vk_API(vk_token,vk_id)
+    ya_one=yaDisk_API(ya_token)
 
-
-upload_list = vk_one.info_filter()
-ya_one.upload_from_list(upload_list)
+    upload_list = vk_one.info_filter()
+    ya_one.upload_from_list(upload_list)
 
 
 
