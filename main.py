@@ -1,5 +1,6 @@
-from pprint import pprint
-import requests, json, os.path
+import requests
+import json
+import os.path
 from datetime import datetime
 from tqdm import tqdm
 
@@ -7,21 +8,22 @@ with open('/Users/rup/Work/BTC/Rules.txt') as file:
     vk_token = file.readline().strip('\n')
     ya_token = file.readline()
 
-vk_id = '552934290' #ДЗ
+vk_id = '552934290'  # ДЗ
+
 
 class vk_API:
 
     def __init__(self, token, id):
         self.url = 'https://api.vk.com/method/'
         self.params = {
-            'access_token':token,
-            'v':'5.131',
-            'owner_id':id
+            'access_token': token,
+            'v': '5.131',
+            'owner_id': id
         }
 
     def get_info(self, album='profile'):
         current_params = {
-            'album_id':album,
+            'album_id': album,
             'extended': 1,
             'photo_sizes': 1
                           }
@@ -36,15 +38,15 @@ class vk_API:
         alb_list = [self.get_info(album) for album in album_id_list]
         img_list = []
         for ph_list in alb_list:
-            img_list += [
-                {
-                    'file_name': f"{ph_info['likes']['count']}.jpg",
-                    'size': f'{ph_info["sizes"][-1]["height"]}x{ph_info["sizes"][-1]["width"]}',
-                    'scale': (ph_info["sizes"][-1]["height"], ph_info["sizes"][-1]["width"]),
-                    'url': ph_info["sizes"][-1]["url"]
-                }
-                for ph_info in ph_list
-            ]
+            for ph_info in ph_list:
+                img_list += [
+                    {
+                        'file_name': f"{ph_info['likes']['count']}.jpg",
+                        'size': f'{ph_info["sizes"][-1]["height"]}x{ph_info["sizes"][-1]["width"]}',
+                        'scale': (ph_info["sizes"][-1]["height"], ph_info["sizes"][-1]["width"]),
+                        'url': ph_info["sizes"][-1]["url"]
+                    }
+                ]
         img_list.sort(key=lambda item: sum(item['scale']), reverse=True)
         return img_list
 
@@ -53,6 +55,7 @@ class vk_API:
         response = requests.get(self.url + current_url, self.params).json()
         items = response['response']['items']
         return items
+
 
 class yaDisk_API:
 
@@ -106,7 +109,8 @@ class yaDisk_API:
         save_json(json_log, f'files/logs/{str(datetime.now().date())}/img_log')
         return json_log
 
-def save_json(content,file_name):
+
+def save_json(content, file_name):
     file_name += '.json'
     try:
         os.makedirs(os.path.dirname(file_name))
@@ -115,13 +119,10 @@ def save_json(content,file_name):
     with open(file_name, 'w+') as file:
         json.dump(content, file, ensure_ascii=False, indent=2)
 
+
 if __name__ == '__main__':
-    vk_one=vk_API(vk_token,vk_id)
-    ya_one=yaDisk_API(ya_token)
+    vk_one = vk_API(vk_token, vk_id)
+    ya_one = yaDisk_API(ya_token)
 
     upload_list = vk_one.info_filter()
     ya_one.upload_from_list(upload_list)
-
-
-
-
